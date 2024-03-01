@@ -1,51 +1,84 @@
 package com.cis.batch33.library.service;
 
-
-
-import com.cis.batch33.library.model.Book;
+import com.cis.batch33.library.entity.Book;
+import com.cis.batch33.library.model.BookDTO;
+import com.cis.batch33.library.model.BookISBNDTO;
+import com.cis.batch33.library.repository.BookRepository;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class BookService {
 
-    private Map<Long, Book> bookMap = new HashMap<>();
+    private final BookRepository bookRepository;
+    private final ModelMapper modelMapper;
 
-    public Book createBook(Book book){
-        Long bookId = generateBookId();
-        book.setBookId(bookId);
-        bookMap.put(bookId, book);
-        return book;
+    @Autowired
+    public BookService(BookRepository bookRepository, ModelMapper modelMapper) {
+        this.bookRepository = bookRepository;
+        this.modelMapper = modelMapper;
     }
 
-    public Book getBook(Long bookId) {
-        return bookMap.get(bookId);
+    public List<BookDTO> getAllBooks() {
+        List<Book> books = bookRepository.findAll();
+        return books.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
-    public Book updateBook(Long bookId, Book updatedBook) {
-        Book existingBook = bookMap.get(bookId);
-        if (existingBook != null) {
-            existingBook.setTitle(updatedBook.getTitle());
-            existingBook.setAuthor(updatedBook.getAuthor());
-            existingBook.setPageCount(updatedBook.getPageCount());
-            existingBook.setGenre(updatedBook.getGenre());
-            return existingBook;
-        } else {
-            return null; // or throw BookNotFoundException
+    public BookDTO getBookById(Integer bookId) {
+        Optional<Book> optionalBook = bookRepository.findById(bookId);
+        if (optionalBook.isPresent()) {
+            return convertToDTO(optionalBook.get());
         }
-
+        return null; // Or throw an exception indicating book not found
     }
 
-
-    public void deleteBook(Long bookId) {
-        bookMap.remove(bookId);
+    public BookDTO addBook(BookDTO bookDTO) {
+        Book book = convertToEntity(bookDTO);
+        Book savedBook = bookRepository.save(book);
+        return convertToDTO(savedBook);
     }
 
-    private Long generateBookId() {
-        // Simulating generation of unique book IDs
-        return new Random().nextLong();
+    public BookDTO updateBook(Integer bookId, BookDTO bookDTO) {
+        Optional<Book> optionalBook = bookRepository.findById(bookId);
+        if (optionalBook.isPresent()) {
+            Book bookToUpdate = optionalBook.get();
+            // Update book fields
+            bookToUpdate.setTitle(bookDTO.getTitle());
+            bookToUpdate.setAuthorName(bookDTO.getAuthorName());
+            bookToUpdate.setYearPubished(bookDTO.getYearPubished());
+            bookToUpdate.setQuantity(bookDTO.getQuantity());
+            // Save the updated book
+            Book updatedBook = bookRepository.save(bookToUpdate);
+            return convertToDTO(updatedBook);
+        }
+        return null; // Or throw an exception indicating book not found
+    }
+
+    public void deleteBook(Integer bookId) {
+        bookRepository.deleteById(bookId);
+    }
+
+    private BookDTO convertToDTO(Book book) {
+        BookDTO bookDTO = modelMapper.map(book, BookDTO.class);
+        List<BookISBNDTO> isbnDTOs = new ArrayList<>();
+        if (book.getBookIsbns() != null) {
+            isbnDTOs = book.getBookIsbns().stream()
+                    .map(isbn -> modelMapper.map(isbn, BookISBNDTO.class))
+                    .collect(Collectors.toList());
+        }
+        bookDTO.setIsbns(isbnDTOs);
+        return bookDTO;
+    }
+
+    private Book convertToEntity(BookDTO bookDTO) {
+        return modelMapper.map(bookDTO, Book.class);
     }
 }

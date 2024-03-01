@@ -1,51 +1,45 @@
 package com.cis.batch33.library.controller;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import com.cis.batch33.library.model.Book;
+import com.cis.batch33.library.model.BookDTO;
 import com.cis.batch33.library.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
-@RequestMapping("/book")
-public class BookController {
-    @Autowired
-    private BookService bookService;
+import java.util.List;
 
-    @GetMapping("/{bookId}")
-    public long getBook(@PathVariable Long bookId){
-        System.out.println("Attempting to retrieve book with ID: " + bookId);
-        Book book = bookService.getBook(bookId);
-        if(book != null) {
-            System.out.println("Book found: " + book.toString());
-        } else {
-            System.out.println("Book not found with ID: " + bookId);
-        }
-        return bookId;
+@RestController
+@RequestMapping("/books")
+public class BookController {
+
+    private final BookService bookService;
+
+    @Autowired
+    public BookController(BookService bookService) {
+        this.bookService = bookService;
     }
 
+    @GetMapping
+    public List<BookDTO> getAllBooks() {
+        return bookService.getAllBooks();
+    }
 
+    @GetMapping("/{bookId}")
+    public BookDTO getBookById(@PathVariable Integer bookId) {
+        return bookService.getBookById(bookId);
+    }
 
     @PostMapping
-    public Book createBook(@RequestBody Book book){
-        return bookService.createBook(book);
+    public BookDTO addBook(@RequestBody BookDTO bookDTO) {
+        return bookService.addBook(bookDTO);
     }
 
     @PutMapping("/{bookId}")
-    public ResponseEntity<Book> updateBook(@PathVariable Long bookId, @RequestBody Book book){
-        Book updatedBook = bookService.updateBook(bookId, book);
-        if(updatedBook != null) {
-            return ResponseEntity.ok(updatedBook);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+    public BookDTO updateBook(@PathVariable Integer bookId, @RequestBody BookDTO bookDTO) {
+        return bookService.updateBook(bookId, bookDTO);
     }
 
-
     @DeleteMapping("/{bookId}")
-    public void deleteBook(@PathVariable Long bookId){
+    public void deleteBook(@PathVariable Integer bookId) {
         bookService.deleteBook(bookId);
     }
 }
-
